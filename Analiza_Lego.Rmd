@@ -18,8 +18,146 @@ opts_chunk$set(message=FALSE, warning=FALSE)
 
 # Executive summary
 
+# Powtarzalność Wyników
+
+Dla zapewnienia powtarzalności wyników przy każdym uruchomieniu raportu dla tych samych danych, ustawiono ziarno dla generatora liczb pseudolosowych.
+
+```{r}
+set.seed(23)
+```
+
 # Wykorzystane biblioteki
+Raport został stworzony przy wykorzystaniu następujących bibliotek.
 
-# Kod odpowiedzialny za wczytanie danych
+```{r}
+library(dplyr)
+library(ggplot2)
+```
 
-# Oczyszczenie i połączenie danych
+# Kod odpowiedzialny za wczytanie danych z plików
+
+```{r}
+colors <- read.csv("dataset/colors.csv")
+parts_cat <- read.csv("dataset/part_categories.csv")
+elements <- read.csv("dataset/elements.csv")
+parts <- read.csv("dataset/parts.csv")
+inv_parts <- read.csv("dataset/inventory_parts.csv")
+
+figs <- read.csv("dataset/minifigs.csv")
+inv_figs <- read.csv("dataset/inventory_minifigs.csv")
+
+themes <- read.csv("dataset/themes.csv")
+sets <- read.csv("dataset/sets.csv")
+inv_sets <- read.csv("dataset/inventory_sets.csv")
+
+inventories <- read.csv("dataset/inventories.csv")
+```
+
+# Oczyszczenie i przetwarzanie danych
+Ta sekcja poświęcona jest przetworzeniu brakujących wartości oraz transformacji wykorzystanych zbiorów danych.
+
+## Zestawy Lego
+
+```{r}
+themes <- setNames(themes, c("theme_id", "theme_name", "parent_id"))
+colnames(sets)[colnames(sets) == "name"] <- "set_name"
+colnames(sets)[colnames(sets) == "num_parts"] <- "set_num_parts"
+colnames(inv_sets)[colnames(inv_sets) == "quantity"] <- "set_qty"
+
+inventory_sets <- inv_sets %>%
+  merge(sets, by = "set_num") %>%
+  merge(themes, by = "theme_id") %>%
+  select(-c("theme_id","img_url","parent_id"))
+```
+
+### Podsumowanie zbioru
+
+```{r}
+knitr::kable(summary(inventory_sets), caption = "Podstawowe statystyki - zestawy Lego")
+
+summarized_data <- inventory_sets %>%
+   group_by(year) %>%
+   summarise(
+       total_set_qty = sum(set_qty, na.rm = TRUE)
+   )
+
+ggplot(summarized_data , aes(x = year, y = total_set_qty)) +
+ geom_line(aes(y = total_set_qty, color = "Zestawy Lego"), size = 1) +
+ labs(x = "Rok", y = "Ilość") +
+ scale_color_manual(
+   values=c("#fc8d62")) +
+ theme_minimal()
+```
+
+## Figurki Lego
+
+``` {r}
+colnames(figs)[colnames(figs) == "name"] <- "fig_name"
+colnames(figs)[colnames(figs) == "num_parts"] <- "fig_num_parts"
+colnames(inv_figs)[colnames(inv_figs) == "quantity"] <- "fig_qty"
+
+inventory_minifigures <- inv_figs %>%
+  merge(figs, by = "fig_num") %>%
+  select(-img_url)
+```
+
+### Podsumowanie zbioru
+
+```{r}
+knitr::kable(summary(inventory_minifigures), caption = "Podstawowe statystyki - figurki Lego")
+```
+
+## Części Lego
+
+``` {r}
+colnames(parts)[colnames(parts) == "name"] <- "part_name"
+colnames(parts_cat)[colnames(parts_cat) == "name"] <- "part_cat_name"
+colnames(parts_cat)[colnames(parts_cat) == "id"] <- "part_cat_id"
+colnames(colors)[colnames(colors) == "name"] <- "color_name"
+colnames(colors)[colnames(colors) == "id"] <- "color_id"
+colnames(inv_parts)[colnames(inv_parts) == "quantity"] <- "part_qty"
+
+element_counts <- elements %>%
+  group_by(part_num, color_id) %>%
+  summarise(element_count = n())
+
+inventory_parts <- inv_parts %>%
+  merge(parts, by = "part_num") %>%
+  merge(colors, by = "color_id") %>%
+  merge(parts_cat, by = "part_cat_id") %>%
+  merge(element_counts, by = c("part_num", "color_id")) %>%
+  select(-c(part_num, color_id, img_url, part_cat_id, rgb, is_spare))
+```
+
+### Podsumowanie zbioru
+
+```{r}
+knitr::kable(summary(inventory_parts), caption = "Podstawowe statystyki - części Lego")
+```
+
+## Połączenie danych
+
+```{r}
+inventory_all <- inventory_sets %>%
+  merge(inventory_minifigures, by = "inventory_id") %>%
+  merge(inventory_parts, by = "inventory_id")
+
+ summarized_data <- inventory_all %>%
+     group_by(year) %>%
+     summarise(
+         total_set_qty = sum(set_qty, na.rm = TRUE),
+         total_part_qty = sum(part_qty, na.rm = TRUE),
+         total_fig_qty = sum(fig_qty, na.rm = TRUE)
+     )
+ ggplot(summarized_data , aes(x = year)) +
+     geom_line(aes(y = total_set_qty, color = "Zestawy Lego"), size = 1) +
+     geom_line(aes(y = total_part_qty, color = "Części Lego"), size = 1) +
+     geom_line(aes(y = total_fig_qty, color = "Figurki Lego"), size = 1) +
+     labs(x = "Rok", y = "Ilość") +
+     scale_color_manual(
+         values=
+             c("#66c2a5",
+               "#fc8d62",
+               "#8da0cb")) +
+     theme_minimal()
+```
