@@ -1,7 +1,7 @@
 ---
 title: "Raport - Analiza bazy danych Lego na przestrzeni lat"
 author: "Tobiasz Gruszczyński 145333"
-date: "03 grudzień 2023"
+date: "04 grudzień 2023"
 output: 
   html_document: 
     toc: yes
@@ -12,10 +12,16 @@ output:
 ---
 
 
+<style type="text/css">
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+  background-color: #8da0cb;
+  border-color: #8da0cb;
+}
+</style>
 
 # Executive summary
 
-# Powtarzalność Wyników
+# Powtarzalność wyników
 
 Dla zapewnienia powtarzalności wyników przy każdym uruchomieniu raportu dla tych samych danych, ustawiono ziarno dla generatora liczb pseudolosowych.
 
@@ -57,6 +63,7 @@ inventories <- read.csv("dataset/inventories.csv")
 Ta sekcja poświęcona jest przetworzeniu brakujących wartości oraz transformacji wykorzystanych zbiorów danych.
 
 ## Zestawy Lego
+Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się tutaj informacje o zestawach Lego, takie jak rok wydania oraz ilość części w zestawie, ale też lata w jakich dany zestaw zadebiutował na rynku. 
 
 
 ```r
@@ -65,61 +72,103 @@ colnames(sets)[colnames(sets) == "name"] <- "set_name"
 colnames(sets)[colnames(sets) == "num_parts"] <- "set_num_parts"
 colnames(inv_sets)[colnames(inv_sets) == "quantity"] <- "set_qty"
 
-inventory_sets <- inv_sets %>%
-  merge(sets, by = "set_num") %>%
-  merge(themes, by = "theme_id") %>%
+sets_with_themes <- themes %>%
+  merge(sets, by = "theme_id") %>%
   select(-c("theme_id","img_url","parent_id"))
 ```
+
+### Analiza atrybutów
+Na wykresach można zaobserwować pewien trend. Wskazuje on na to, że wraz z upływem czasu powstaje coraz więcej zestawów Lego. Dodatkowo są one coraz większe i bardziej rozbudowane, na co wskazuje rosnąca liczba części.
+
+
+```r
+unique_theme_data <- sets_with_themes %>%
+    group_by(year) %>%
+    filter(year >= 1980) %>%
+    filter(year <= 2023) %>%
+    summarise(unique_theme = n_distinct(theme_name, na.rm = TRUE))
+
+ggplot(unique_theme_data , aes(x = year, y = unique_theme)) +
+    geom_line(aes(y = unique_theme, color = "Unikalne tematyki zestawów")) +
+    labs(x = "Rok", y = "Liczba tematyk", colour = "Legenda") +
+    scale_color_manual(values=c("#fc8d62")) +
+    theme_bw()
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+```r
+mean_nparts_data <- sets_with_themes %>%
+    group_by(year) %>%
+    filter(year >= 1980) %>%
+    filter(year <= 2023) %>%
+    summarise(mean_nparts = mean(set_num_parts, na.rm = TRUE))
+
+ggplot(mean_nparts_data , aes(x = year, y = mean_nparts)) +
+    ggtitle("Średnia liczba części w zestawach w latach 1980-2023") +
+    geom_bar(stat="identity", fill = "#fc8d62") +
+    labs(x = "Rok", y = "Liczba części") +
+    theme_bw()
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-6-2.png)<!-- -->
 
 ### Podsumowanie zbioru
 
 
 ```r
-knitr::kable(summary(inventory_sets), caption = "Podstawowe statystyki - zestawy Lego")
+knitr::kable(summary(sets_with_themes), caption = "Podstawowe statystyki - zestawy Lego")
 ```
 
 
 
 Table: Podstawowe statystyki - zestawy Lego
 
-|   |  set_num        | inventory_id  |   set_qty     |  set_name       |     year    |set_num_parts  | theme_name      |
-|:--|:----------------|:--------------|:--------------|:----------------|:------------|:--------------|:----------------|
-|   |Length:4358      |Min.   :    35 |Min.   : 1.000 |Length:4358      |Min.   :1964 |Min.   :   0.0 |Length:4358      |
-|   |Class :character |1st Qu.:  8076 |1st Qu.: 1.000 |Class :character |1st Qu.:2004 |1st Qu.:   9.0 |Class :character |
-|   |Mode  :character |Median : 16423 |Median : 1.000 |Mode  :character |Median :2011 |Median :  45.0 |Mode  :character |
-|   |NA               |Mean   : 52519 |Mean   : 1.813 |NA               |Mean   :2010 |Mean   : 119.3 |NA               |
-|   |NA               |3rd Qu.: 98685 |3rd Qu.: 1.000 |NA               |3rd Qu.:2016 |3rd Qu.: 121.0 |NA               |
-|   |NA               |Max.   :191576 |Max.   :60.000 |NA               |Max.   :2023 |Max.   :4024.0 |NA               |
-
-```r
-summarized_data <- inventory_sets %>%
-   group_by(year) %>%
-   summarise(
-       total_set_qty = sum(set_qty, na.rm = TRUE)
-   )
-
-ggplot(summarized_data , aes(x = year, y = total_set_qty)) +
- geom_line(aes(y = total_set_qty, color = "Zestawy Lego"), size = 1) +
- labs(x = "Rok", y = "Ilość") +
- scale_color_manual(
-   values=c("#fc8d62")) +
- theme_minimal()
-```
-
-![](Analiza_Lego_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+|   | theme_name      |  set_num        |  set_name       |     year    |set_num_parts   |
+|:--|:----------------|:----------------|:----------------|:------------|:---------------|
+|   |Length:21880     |Length:21880     |Length:21880     |Min.   :1949 |Min.   :    0.0 |
+|   |Class :character |Class :character |Class :character |1st Qu.:2001 |1st Qu.:    3.0 |
+|   |Mode  :character |Mode  :character |Mode  :character |Median :2012 |Median :   31.0 |
+|   |                 |                 |                 |Mean   :2008 |Mean   :  161.4 |
+|   |                 |                 |                 |3rd Qu.:2018 |3rd Qu.:  139.0 |
+|   |                 |                 |                 |Max.   :2024 |Max.   :11695.0 |
 
 ## Figurki Lego
+Kolejna część badanego zbioru danych. Możemy znaleźć tutaj informacje o figurkach m.in. z czego się one składają.  
 
 
 ```r
 colnames(figs)[colnames(figs) == "name"] <- "fig_name"
 colnames(figs)[colnames(figs) == "num_parts"] <- "fig_num_parts"
 colnames(inv_figs)[colnames(inv_figs) == "quantity"] <- "fig_qty"
+colnames(inventories)[colnames(inventories) == "id"] <- "inventory_id"
 
 inventory_minifigures <- inv_figs %>%
-  merge(figs, by = "fig_num") %>%
-  select(-img_url)
+     merge(figs, by = "fig_num") %>%
+     merge(inventories, by = "inventory_id") %>%
+     merge(sets, by = "set_num") %>%
+     select(-c(1:2, 7:9, 11:13))
 ```
+
+### Analiza atrybutów
+Jeśli chodzi o ilość wykorzystywanych w zestawach figurek, to możemy zauważyć, że z czasem wykorzystywane są one coraz częściej.
+
+
+```r
+figures_number <- inventory_minifigures  %>%
+    group_by(year) %>%
+    filter(year >= 1980) %>%
+    filter(year <= 2023) %>%
+    summarise(fig_count = n())
+
+ggplot(figures_number , aes(x = year, y = fig_count)) +
+     geom_line(aes(y = fig_count, color = "Liczba figurek")) +
+     labs(x = "Rok", y = "Liczba figurek", colour = "Legenda") +
+     scale_color_manual(values=c("#fc8d62")) +
+     theme_bw()
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 ### Podsumowanie zbioru
 
@@ -132,16 +181,17 @@ knitr::kable(summary(inventory_minifigures), caption = "Podstawowe statystyki - 
 
 Table: Podstawowe statystyki - figurki Lego
 
-|   |  fig_num        | inventory_id  |   fig_qty      |  fig_name       |fig_num_parts   |
-|:--|:----------------|:--------------|:---------------|:----------------|:---------------|
-|   |Length:20858     |Min.   :     3 |Min.   :  1.000 |Length:20858     |Min.   :  0.000 |
-|   |Class :character |1st Qu.:  7869 |1st Qu.:  1.000 |Class :character |1st Qu.:  4.000 |
-|   |Mode  :character |Median : 15681 |Median :  1.000 |Mode  :character |Median :  4.000 |
-|   |NA               |Mean   : 43010 |Mean   :  1.062 |NA               |Mean   :  4.813 |
-|   |NA               |3rd Qu.: 66834 |3rd Qu.:  1.000 |NA               |3rd Qu.:  5.000 |
-|   |NA               |Max.   :194312 |Max.   :100.000 |NA               |Max.   :143.000 |
+|   |  fig_num        |   fig_qty      |  fig_name       |fig_num_parts   |     year    |
+|:--|:----------------|:---------------|:----------------|:---------------|:------------|
+|   |Length:20858     |Min.   :  1.000 |Length:20858     |Min.   :  0.000 |Min.   :1975 |
+|   |Class :character |1st Qu.:  1.000 |Class :character |1st Qu.:  4.000 |1st Qu.:2006 |
+|   |Mode  :character |Median :  1.000 |Mode  :character |Median :  4.000 |Median :2014 |
+|   |                 |Mean   :  1.062 |                 |Mean   :  4.813 |Mean   :2011 |
+|   |                 |3rd Qu.:  1.000 |                 |3rd Qu.:  5.000 |3rd Qu.:2019 |
+|   |                 |Max.   :100.000 |                 |Max.   :143.000 |Max.   :2023 |
 
 ## Części Lego
+Ostatania część badanego zestawu danych zawiera informacje na temat części Lego. Znajdują się tutaj szczegóły poszczególnych części: elementy z których się składają, kolory, materiał z którego zostały wykonane oraz kategoria do której przynależą.
 
 
 ```r
@@ -161,8 +211,73 @@ inventory_parts <- inv_parts %>%
   merge(colors, by = "color_id") %>%
   merge(parts_cat, by = "part_cat_id") %>%
   merge(element_counts, by = c("part_num", "color_id")) %>%
-  select(-c(part_num, color_id, img_url, part_cat_id, rgb, is_spare))
+  merge(inventories, by = "inventory_id") %>%
+  merge(sets, by = "set_num") %>%
+  select(-c(1:2, 4, 7:8, 12, 16:17, 19:21))
 ```
+
+### Analiza atrybutów
+W przypadku części Lego również można dostrzeć pewne trendy. Wykorzystywane elementy są coraz bardzie zróżnicowane, poprzez tworzenie części z nowych materiałów oraz w nowych kolorach. Warte wyróżnienia jest że złożoność części się nie zmieniła (na jedną część średnio przypada 1.5 elementu)
+
+
+```r
+transparent_parts <- inventory_parts %>%
+    group_by(is_trans) %>%
+    filter(year >= 1980) %>%
+    filter(year <= 2023) %>%
+    summarise(count = n())
+
+ggplot(transparent_parts, aes(x=is_trans, y=count, fill=is_trans)) + 
+  geom_bar(stat="identity", position="dodge") +
+  scale_fill_manual(values = c("t" = "#66c2a5", "f" = "#fc8d62"), labels = c("TAK", "NIE")) +
+  scale_x_discrete(labels = c("t" = "TAK", "f" = "NIE")) +
+  labs(title = "Zestawienie kolorów (transparentność)", x = "Transparentność", y = "Liczba obserwacji", fill = "Legenda")
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+```r
+unique_data <- inventory_parts %>%
+    filter(year >= 1980) %>%
+    filter(year <= 2023) %>%
+    group_by(year, part_material) %>%
+    summarise(count = n(), type = "Material") %>%
+    bind_rows(
+        inventory_parts %>%
+            group_by(year, color_name) %>%
+            summarise(count = n(), type = "Color") %>%
+            bind_rows(
+                inventory_parts %>%
+                    group_by(year, part_cat_name) %>%
+                    summarise(count = n(), type = "Category")
+            )
+    )
+
+ggplot(unique_data, aes(x = year, y = count, fill = type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(type ~ ., scales = "free_y", labeller = labeller(type = c("Material" = "Materiały", "Color" = "Kolory", "Category" = "Kategorie"))) +
+  scale_fill_manual(values = c("Category" = "#66c2a5", "Color" = "#fc8d62", "Material" = "#8da0cb"), labels = c("Kategorie", "Kolory", "Materiały")) +
+  labs(x = "Rok", y = "Liczba obserwacji", fill = "Legenda") +
+  theme_bw()
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-12-2.png)<!-- -->
+
+```r
+elements_count <- inventory_parts %>%
+  group_by(year) %>%
+  filter(year >= 1980) %>%
+  filter(year <= 2023) %>%
+  summarise(el_count = mean(element_count, na.rm = TRUE))
+
+ggplot(elements_count  , aes(x = year, y = el_count)) +
+  geom_line(aes(color = "Średnia ilość elementów w częściach")) +
+  labs(x = "Rok", y = "Liczba elementów", colour = "Legenda") +
+  scale_color_manual(values=c("#fc8d62")) +
+  theme_bw()
+```
+
+![](Analiza_Lego_files/figure-html/unnamed-chunk-12-3.png)<!-- -->
 
 ### Podsumowanie zbioru
 
@@ -175,41 +290,15 @@ knitr::kable(summary(inventory_parts), caption = "Podstawowe statystyki - częś
 
 Table: Podstawowe statystyki - części Lego
 
-|   | inventory_id  |   part_qty      | part_name       |part_material    | color_name      |  is_trans       |part_cat_name    |element_count |
-|:--|:--------------|:----------------|:----------------|:----------------|:----------------|:----------------|:----------------|:-------------|
-|   |Min.   :     3 |Min.   :   1.000 |Length:1100246   |Length:1100246   |Length:1100246   |Length:1100246   |Length:1100246   |Min.   :1.000 |
-|   |1st Qu.:  9605 |1st Qu.:   1.000 |Class :character |Class :character |Class :character |Class :character |Class :character |1st Qu.:1.000 |
-|   |Median : 23669 |Median :   2.000 |Mode  :character |Mode  :character |Mode  :character |Mode  :character |Mode  :character |Median :1.000 |
-|   |Mean   : 51841 |Mean   :   3.432 |NA               |NA               |NA               |NA               |NA               |Mean   :1.591 |
-|   |3rd Qu.: 90217 |3rd Qu.:   4.000 |NA               |NA               |NA               |NA               |NA               |3rd Qu.:2.000 |
-|   |Max.   :194312 |Max.   :3064.000 |NA               |NA               |NA               |NA               |NA               |Max.   :9.000 |
+|   |  part_num       | part_cat_id  |   part_qty      | part_name       |part_material    | color_name      |  is_trans       |part_cat_name    |element_count |     year    |
+|:--|:----------------|:-------------|:----------------|:----------------|:----------------|:----------------|:----------------|:----------------|:-------------|:------------|
+|   |Length:1040218   |Min.   : 1.00 |Min.   :   1.000 |Length:1040218   |Length:1040218   |Length:1040218   |Length:1040218   |Length:1040218   |Min.   :1.000 |Min.   :1954 |
+|   |Class :character |1st Qu.:11.00 |1st Qu.:   1.000 |Class :character |Class :character |Class :character |Class :character |Class :character |1st Qu.:1.000 |1st Qu.:2008 |
+|   |Mode  :character |Median :15.00 |Median :   2.000 |Mode  :character |Mode  :character |Mode  :character |Mode  :character |Mode  :character |Median :1.000 |Median :2016 |
+|   |                 |Mean   :21.73 |Mean   :   3.566 |                 |                 |                 |                 |                 |Mean   :1.591 |Mean   :2013 |
+|   |                 |3rd Qu.:28.00 |3rd Qu.:   4.000 |                 |                 |                 |                 |                 |3rd Qu.:2.000 |3rd Qu.:2020 |
+|   |                 |Max.   :68.00 |Max.   :3064.000 |                 |                 |                 |                 |                 |Max.   :9.000 |Max.   :2023 |
 
 ## Połączenie danych
 
 
-```r
-inventory_all <- inventory_sets %>%
-  merge(inventory_minifigures, by = "inventory_id") %>%
-  merge(inventory_parts, by = "inventory_id")
-
- summarized_data <- inventory_all %>%
-     group_by(year) %>%
-     summarise(
-         total_set_qty = sum(set_qty, na.rm = TRUE),
-         total_part_qty = sum(part_qty, na.rm = TRUE),
-         total_fig_qty = sum(fig_qty, na.rm = TRUE)
-     )
- ggplot(summarized_data , aes(x = year)) +
-     geom_line(aes(y = total_set_qty, color = "Zestawy Lego"), size = 1) +
-     geom_line(aes(y = total_part_qty, color = "Części Lego"), size = 1) +
-     geom_line(aes(y = total_fig_qty, color = "Figurki Lego"), size = 1) +
-     labs(x = "Rok", y = "Ilość") +
-     scale_color_manual(
-         values=
-             c("#66c2a5",
-               "#fc8d62",
-               "#8da0cb")) +
-     theme_minimal()
-```
-
-![](Analiza_Lego_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
