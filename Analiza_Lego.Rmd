@@ -39,6 +39,10 @@ Raport został stworzony przy wykorzystaniu następujących bibliotek.
 ```{r}
 library(dplyr)
 library(ggplot2)
+library(tidyr)
+library(tibble)
+library(plotly)
+library(gganimate)
 ```
 
 # Kod odpowiedzialny za wczytanie danych z plików
@@ -97,9 +101,9 @@ mean_nparts_data <- sets_with_themes %>%
     group_by(year) %>%
     filter(year >= 1980) %>%
     filter(year <= 2023) %>%
-    summarise(mean_nparts = mean(set_num_parts, na.rm = TRUE))
+    summarise(sets_mean_nparts = mean(set_num_parts, na.rm = TRUE), sets_count = n())
 
-ggplot(mean_nparts_data , aes(x = year, y = mean_nparts)) +
+ggplot(mean_nparts_data , aes(x = year, y = sets_mean_nparts)) +
     ggtitle("Średnia liczba części w zestawach w latach 1980-2023") +
     geom_bar(stat="identity", fill = "#fc8d62") +
     labs(x = "Rok", y = "Liczba części") +
@@ -164,7 +168,7 @@ colnames(inv_parts)[colnames(inv_parts) == "quantity"] <- "part_qty"
 
 element_counts <- elements %>%
   group_by(part_num, color_id) %>%
-  summarise(element_count = n())
+  summarise(element_per_part_in_color = n())
 
 inventory_parts <- inv_parts %>%
   merge(parts, by = "part_num") %>%
@@ -184,9 +188,9 @@ transparent_parts <- inventory_parts %>%
     group_by(is_trans) %>%
     filter(year >= 1980) %>%
     filter(year <= 2023) %>%
-    summarise(count = n())
+    summarise(trans_part_count = n())
 
-ggplot(transparent_parts, aes(x=is_trans, y=count, fill=is_trans)) + 
+ggplot(transparent_parts, aes(x=is_trans, y=trans_part_count, fill=is_trans)) + 
   geom_bar(stat="identity", position="dodge") +
   scale_fill_manual(values = c("t" = "#66c2a5", "f" = "#fc8d62"), labels = c("TAK", "NIE")) +
   scale_x_discrete(labels = c("t" = "TAK", "f" = "NIE")) +
@@ -221,9 +225,9 @@ elements_count <- inventory_parts %>%
   group_by(year) %>%
   filter(year >= 1980) %>%
   filter(year <= 2023) %>%
-  summarise(el_count = mean(element_count, na.rm = TRUE))
+  summarise(el_in_part = mean(element_per_part_in_color, na.rm = TRUE))
 
-ggplot(elements_count  , aes(x = year, y = el_count)) +
+ggplot(elements_count  , aes(x = year, y = el_in_part)) +
   geom_line(aes(color = "Średnia ilość elementów w częściach")) +
   labs(x = "Rok", y = "Liczba elementów", colour = "Legenda") +
   scale_color_manual(values=c("#fc8d62")) +
@@ -239,5 +243,73 @@ knitr::kable(summary(inventory_parts), caption = "Podstawowe statystyki - częś
 ## Połączenie danych
 
 ```{r}
-
+dataset <- unique_theme_data %>%
+  merge(mean_nparts_data) %>%
+  merge(figures_number) %>%
+  merge(transparent_parts) %>%
+  merge(elements_count)
 ```
+
+# Podsumowanie badanego zbioru
+
+```{r}
+knitr::kable(summary(dataset))
+```
+
+## Trend w rozwoju LEGO
+W tej sekcji przedstawiono jak na przestrzeni lat (1980-2023) zmieniały się trendy w Lego. Uwzględniono zmiany w złożoności zestawów (średniej wykorzystywanych w nich części) poprzez wielkość punktu, w porównaniu z ilością wykorzystywanych w zestawach figurek oraz liczby dostępnych zestawów. 
+
+Na podstawie wykresu możemy zauważyć, że największy przesko jeśli chodzi o zaawansowanie zestawów (ich ilośc i złożoność), przypada na okres około 2010 roku.
+
+```{r}
+animation <- dataset %>% 
+  select(year, sets_count, fig_count, sets_mean_nparts)
+
+p <- ggplot(animation, aes(x=sets_count, y=fig_count, size = sets_mean_nparts)) +
+    geom_point(show.legend = FALSE, alpha = 0.8, color = "#fc8d62") +
+    labs(title = 'Rok: {frame_time}', x = "Liczba dostępnych zestawów", y = "Ilość wykorzystywanych figurek") +
+    transition_time(year) 
+
+animate(p, nframes = 225)
+```
+
+# Wyznaczenie korelacji
+Na poniższym wykresie przedstawiona została wartość współczynnika korelacji Pearsona między parametrami atrybutów w zbiorze.
+
+```{r, message=FALSE, echo=FALSE, out.width = "100%", fig.align="center"}
+cor_matrix <- cor(x = dataset  %>% select(-6), use="pairwise.complete.obs")
+
+cor_df = data.frame(cor_matrix) %>%
+  rownames_to_column() %>%
+  pivot_longer(-rowname, names_to="colname")
+
+p <- ggplot(cor_df, aes(colname, rowname, fill=value)) + 
+  geom_tile() +
+  scale_fill_gradient2() + 
+  theme(axis.text.x=element_text(angle = 45, hjust = 1)) +
+  labs(title = "Wykres Korelacji", x = "Kolumny", y = "wiersze", fill = "Wartość współczynnika korelacji Pearsona")
+
+ggplotly(p)
+```
+
+W tabeli przedstawiono wartości współczynnika korelacji dla poszczególnych par atrybutów.
+
+```{r, echo=FALSE}
+knitr::kable(cor_df %>% 
+             filter(colname > rowname) %>% 
+             arrange(desc(abs(value))),
+             col.names = c("Wiersz", "Kolumna", "Współczynnik korelacji"))
+```
+
+## Podsumowanie
+Wnioski wyciągnięte na podstawień obliczeń współczynnika korelacji:
+
+- Rok i unikalne tematyki: wraz z upływem czasu na rynku pojawiają się zestawy w nowych tematykach
+- Rok i liczba figurek: wraz z upływem czasu w zestawach znajduje się więcej figurek
+- Rok i średnia liczba części w zestawach: wraz z upływem czasu zestawy stają się coraz bardziej rozbudowane i są większe (więcej części)
+- Liczba elementów w częściach i unikalne tematyki: poszczególne tematyki zestawów różnią się pod względem złożoności części w zestawach 
+- Liczba elementów w częściach i średnia liczba części w zestawach: w bardziej rozbudowanych zestawach wykorzystywane klocki są mniej złożone
+- Liczba transparentnych kolorów elementów: Brak wykazanej korelacji. Może to sugerować, że to czy element jest przezroczysty nie jest istotnym aspektem zestawów klocków.
+
+# Klasyfikacja
+W tej sekcji opisano sposób wykorzystania uczenia maszynowego, w celu próby przewidzenia dalszych cech zestawów Lego. W tym celu wykorzystano algorytm Random Forest z wykorzystaniem losowanie ze zwracaniem (powtórzonej metody krzyżowej jak nie ogarnę bootstrapingu).
