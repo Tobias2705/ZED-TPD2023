@@ -70,7 +70,7 @@ inventories <- read.csv("dataset/inventories.csv")
 Ta sekcja poświęcona jest przetworzeniu brakujących wartości oraz transformacji wykorzystanych zbiorów danych.
 
 ## Zestawy Lego
-Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się tutaj informacje o zestawach Lego, takie jak rok wydania oraz ilość części w zestawie, ale też lata w jakich dany zestaw zadebiutował na rynku. 
+Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się tutaj informacje o zestawach Lego, takie jak: rok wydania oraz ilość części w zestawie, ale też lata w jakich dany zestaw zadebiutował na rynku. 
 
 ```{r}
 themes <- setNames(themes, c("theme_id", "theme_name", "parent_id"))
@@ -135,7 +135,7 @@ inventory_minifigures <- inv_figs %>%
 ```
 
 ### Analiza atrybutów
-Jeśli chodzi o ilość wykorzystywanych w zestawach figurek, to możemy zauważyć, że z czasem wykorzystywane są one coraz częściej.
+Jeśli chodzi o ilość wykorzystywanych w zestawach figurek to możemy zauważyć, że z czasem wykorzystywane są one coraz częściej.
 
 ```{r}
 figures_number <- inventory_minifigures  %>%
@@ -262,7 +262,7 @@ knitr::kable(summary(dataset))
 ## Trend w rozwoju LEGO
 W tej sekcji przedstawiono jak na przestrzeni lat (1980-2023) zmieniały się trendy w Lego. Uwzględniono zmiany w złożoności zestawów (średniej liczby wykorzystywanych w nich części) poprzez wielkość punktu, w porównaniu z ilością wykorzystywanych w zestawach figurek oraz liczby dostępnych zestawów. 
 
-Na podstawie wykresu możemy zauważyć, że największy przeskok jeśli chodzi o zaawansowanie zestawów (ich ilośc i złożoność), przypada na okres około 2010 roku.
+Na podstawie wykresu możemy zauważyć, że największy przeskok jeśli chodzi o zaawansowanie zestawów (ich ilość i złożoność), przypada na okres około 2010 roku.
 
 ```{r}
 animation <- dataset %>% 
@@ -335,7 +335,7 @@ testing <- dataset[-inTraining,]
 
 ## Schemat uczenia
 Przygotowano schemat uczenia wraz z optymalizacją parametrów modelu. Najlepszy model został stworzony dla parametru liczby zmiennych losowo wybranych jako kandydaci w każdym podziale (mtry) równego 4.
-Poza tym wybrany model charakteryzuje się najniższym błędem średniokwadratowym (RMSE), który wynosi 20.29928 Dodatkowo miara dopasowania modelu do danych (Rsquared) również jest jedną z wyższych.
+Poza tym wybrany model charakteryzuje się najniższym błędem średniokwadratowym (RMSE), który wynosi 20.29928. Dodatkowo miara dopasowania modelu do danych (Rsquared) również jest też najwyższa.
 
 ```{r}
 rfGrid <- expand.grid(mtry = 2:20)
