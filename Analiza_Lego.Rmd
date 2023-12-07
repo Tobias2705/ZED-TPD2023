@@ -24,6 +24,15 @@ options(knitr.kable.NA = '')
 ```
 
 # Executive summary
+Raport ma na celu przeanalizowanie oraz interpretacje bazy danych Lego na przestrzeni lat.
+
+Z roku na rok na rynku możemy zauważyć coraz bardziej rozmaite zestawy klocków Lego. Dlatego też analizie poddano elementy związane z zestawami, figurkami oraz poszczególnymi częściami. W raporcie skupiono się na trendach rozwojowych w tej kategorii produktów, badając zmiany w ilości dostępnych tematyk, rozbudowie zestawów, a także w użyciu figurek i różnorodności części.
+
+Analiza danych obejmuje lata 1980-2023 i uwydatnia ewolucję Lego, zarówno pod kątem liczby produktów, jak i ich złożoności. Zbiór danych został uproszczony do obiektów reprezentujących zestawy z klockami (posiadającymi jakieś części).
+
+Zbiór danych został poddany analizie korelacji, dzięki czemu wyróżniono istotne związki pomiędzy różnymi atrybutami, takimi jak rok produkcji, liczba używanych figurek, czy złożoność zestawów. Korelacje te dostarczają głębszego zrozumienia dynamiki rozwoju produktów Lego na przestrzeni lat.
+
+Ostatnim elementem analizy jest sekcja próbująca przewidzieć złożoność zestawów Lego, w tym celu użytu algorytmu uczenia maszynowego Random Forest. Na tej podstawie można wyciągnać wniosek, że największy wpływ na to mają : upływający czas oraz ilość figurek.
 
 # Powtarzalność wyników
 
@@ -73,6 +82,7 @@ Ta sekcja poświęcona jest przetworzeniu brakujących wartości oraz transforma
 Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się tutaj informacje o zestawach Lego, takie jak: rok wydania oraz ilość części w zestawie, ale też lata w jakich dany zestaw zadebiutował na rynku. 
 
 ```{r}
+sets <- sets %>% filter(num_parts > 0)
 themes <- setNames(themes, c("theme_id", "theme_name", "parent_id"))
 colnames(sets)[colnames(sets) == "name"] <- "set_name"
 colnames(sets)[colnames(sets) == "num_parts"] <- "set_num_parts"
