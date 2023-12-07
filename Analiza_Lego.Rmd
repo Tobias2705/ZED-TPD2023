@@ -43,6 +43,8 @@ library(tidyr)
 library(tibble)
 library(plotly)
 library(gganimate)
+library(caret)
+library(randomForest)
 ```
 
 # Kod odpowiedzialny za wczytanie danych z plików
@@ -92,7 +94,7 @@ unique_theme_data <- sets_with_themes %>%
     summarise(unique_theme = n_distinct(theme_name, na.rm = TRUE))
 
 ggplot(unique_theme_data , aes(x = year, y = unique_theme)) +
-    geom_line(aes(y = unique_theme, color = "Unikalne tematyki zestawów")) +
+    geom_line(aes(y = unique_theme, color = "Unikalne tematyki zestawów"), size = 1) +
     labs(x = "Rok", y = "Liczba tematyk", colour = "Legenda") +
     scale_color_manual(values=c("#fc8d62")) +
     theme_bw()
@@ -143,7 +145,7 @@ figures_number <- inventory_minifigures  %>%
     summarise(fig_count = n())
 
 ggplot(figures_number , aes(x = year, y = fig_count)) +
-     geom_line(aes(y = fig_count, color = "Liczba figurek")) +
+     geom_line(aes(y = fig_count, color = "Liczba figurek"), size = 1) +
      labs(x = "Rok", y = "Liczba figurek", colour = "Legenda") +
      scale_color_manual(values=c("#fc8d62")) +
      theme_bw()
@@ -168,7 +170,7 @@ colnames(inv_parts)[colnames(inv_parts) == "quantity"] <- "part_qty"
 
 element_counts <- elements %>%
   group_by(part_num, color_id) %>%
-  summarise(element_per_part_in_color = n())
+  summarise(el_per_part = n())
 
 inventory_parts <- inv_parts %>%
   merge(parts, by = "part_num") %>%
@@ -181,7 +183,7 @@ inventory_parts <- inv_parts %>%
 ```
 
 ### Analiza atrybutów
-W przypadku części Lego również można dostrzeć pewne trendy. Wykorzystywane elementy są coraz bardzie zróżnicowane, poprzez tworzenie części z nowych materiałów oraz w nowych kolorach. Warte wyróżnienia jest że złożoność części się nie zmieniła (na jedną część średnio przypada 1.5 elementu)
+W przypadku części Lego również można dostrzeć pewne trendy. Wykorzystywane elementy są coraz bardziej zróżnicowane, poprzez tworzenie części z nowych materiałów oraz w nowych kolorach. Warte wyróżnienia jest, że złożoność części się nie zmieniła (na jedną część średnio przypada 1.5 elementu)
 
 ```{r}
 transparent_parts <- inventory_parts %>%
@@ -194,7 +196,8 @@ ggplot(transparent_parts, aes(x=is_trans, y=trans_part_count, fill=is_trans)) +
   geom_bar(stat="identity", position="dodge") +
   scale_fill_manual(values = c("t" = "#66c2a5", "f" = "#fc8d62"), labels = c("TAK", "NIE")) +
   scale_x_discrete(labels = c("t" = "TAK", "f" = "NIE")) +
-  labs(title = "Zestawienie kolorów (transparentność)", x = "Transparentność", y = "Liczba obserwacji", fill = "Legenda")
+  labs(title = "Zestawienie kolorów (transparentność)", x = "Transparentność", y = "Liczba obserwacji", fill = "Legenda") +
+  theme_bw()
 
 
 unique_data <- inventory_parts %>%
@@ -225,10 +228,10 @@ elements_count <- inventory_parts %>%
   group_by(year) %>%
   filter(year >= 1980) %>%
   filter(year <= 2023) %>%
-  summarise(el_in_part = mean(element_per_part_in_color, na.rm = TRUE))
+  summarise(el_in_part = mean(el_per_part, na.rm = TRUE))
 
 ggplot(elements_count  , aes(x = year, y = el_in_part)) +
-  geom_line(aes(color = "Średnia ilość elementów w częściach")) +
+  geom_line(aes(color = "Średnia ilość elementów w częściach"), size = 1) +
   labs(x = "Rok", y = "Liczba elementów", colour = "Legenda") +
   scale_color_manual(values=c("#fc8d62")) +
   theme_bw()
@@ -257,9 +260,9 @@ knitr::kable(summary(dataset))
 ```
 
 ## Trend w rozwoju LEGO
-W tej sekcji przedstawiono jak na przestrzeni lat (1980-2023) zmieniały się trendy w Lego. Uwzględniono zmiany w złożoności zestawów (średniej wykorzystywanych w nich części) poprzez wielkość punktu, w porównaniu z ilością wykorzystywanych w zestawach figurek oraz liczby dostępnych zestawów. 
+W tej sekcji przedstawiono jak na przestrzeni lat (1980-2023) zmieniały się trendy w Lego. Uwzględniono zmiany w złożoności zestawów (średniej liczby wykorzystywanych w nich części) poprzez wielkość punktu, w porównaniu z ilością wykorzystywanych w zestawach figurek oraz liczby dostępnych zestawów. 
 
-Na podstawie wykresu możemy zauważyć, że największy przesko jeśli chodzi o zaawansowanie zestawów (ich ilośc i złożoność), przypada na okres około 2010 roku.
+Na podstawie wykresu możemy zauważyć, że największy przeskok jeśli chodzi o zaawansowanie zestawów (ich ilośc i złożoność), przypada na okres około 2010 roku.
 
 ```{r}
 animation <- dataset %>% 
@@ -268,7 +271,8 @@ animation <- dataset %>%
 p <- ggplot(animation, aes(x=sets_count, y=fig_count, size = sets_mean_nparts)) +
     geom_point(show.legend = FALSE, alpha = 0.8, color = "#fc8d62") +
     labs(title = 'Rok: {frame_time}', x = "Liczba dostępnych zestawów", y = "Ilość wykorzystywanych figurek") +
-    transition_time(year) 
+    transition_time(year) +
+    theme_bw()
 
 animate(p, nframes = 225)
 ```
@@ -304,12 +308,88 @@ knitr::kable(cor_df %>%
 ## Podsumowanie
 Wnioski wyciągnięte na podstawień obliczeń współczynnika korelacji:
 
-- Rok i unikalne tematyki: wraz z upływem czasu na rynku pojawiają się zestawy w nowych tematykach
+- Rok i unikalne tematyki: wraz z upływem czasu na rynku pojawiają się zestawy o nowych tematykach
 - Rok i liczba figurek: wraz z upływem czasu w zestawach znajduje się więcej figurek
 - Rok i średnia liczba części w zestawach: wraz z upływem czasu zestawy stają się coraz bardziej rozbudowane i są większe (więcej części)
 - Liczba elementów w częściach i unikalne tematyki: poszczególne tematyki zestawów różnią się pod względem złożoności części w zestawach 
 - Liczba elementów w częściach i średnia liczba części w zestawach: w bardziej rozbudowanych zestawach wykorzystywane klocki są mniej złożone
-- Liczba transparentnych kolorów elementów: Brak wykazanej korelacji. Może to sugerować, że to czy element jest przezroczysty nie jest istotnym aspektem zestawów klocków.
+- Liczba transparentnych kolorów elementów: brak wykazanej korelacji. Może to sugerować, że to czy element jest przezroczysty, nie jest istotnym aspektem zestawów klocków
 
 # Klasyfikacja
-W tej sekcji opisano sposób wykorzystania uczenia maszynowego, w celu próby przewidzenia dalszych cech zestawów Lego. W tym celu wykorzystano algorytm Random Forest z wykorzystaniem losowanie ze zwracaniem (powtórzonej metody krzyżowej jak nie ogarnę bootstrapingu).
+W tej sekcji opisano wykorzystanie uczenia maszynowego do prognozowania złożoności zestawów Lego, czyli średniej liczby ich części. Do tego celu użyto algorytmu Random Forest, z zastosowaniem metody losowania ze zwracaniem (bootstraping).
+
+## Podział zbioru danych
+
+```{r}
+dataset$is_trans <- as.factor(dataset$is_trans)
+
+inTraining <-
+  createDataPartition(
+    y = dataset$sets_mean_nparts,
+    p = .7,
+    list = FALSE)
+
+training <- dataset[inTraining,]
+testing <- dataset[-inTraining,]
+```
+
+## Schemat uczenia
+Przygotowano schemat uczenia wraz z optymalizacją parametrów modelu. Najlepszy model został stworzony dla parametru liczby zmiennych losowo wybranych jako kandydaci w każdym podziale (mtry) równego 4.
+Poza tym wybrany model charakteryzuje się najniższym błędem średniokwadratowym (RMSE), który wynosi 20.29928 Dodatkowo miara dopasowania modelu do danych (Rsquared) również jest jedną z wyższych.
+
+```{r}
+rfGrid <- expand.grid(mtry = 2:20)
+gridCtrl <- trainControl(method = "boot", number = 100)
+```
+
+## Uczenie modelu
+
+```{r}
+fitTune <- train(sets_mean_nparts ~ .,
+               data = training,
+               method = "rf",
+               trControl = gridCtrl,
+               tuneGrid = rfGrid,
+               ntree = 40)
+
+fitTune
+```
+
+## Predykcja
+
+```{r}
+predictions <- predict(fitTune, newdata = testing)
+```
+
+## Ważność atrybutów
+
+```{r}
+important_df <- data.frame(importance(fitTune$finalModel))
+important_df$names <- rownames(important_df)
+
+
+ggplot(important_df, aes(x=names, y=IncNodePurity/100)) + 
+  geom_bar(stat="identity", fill = "#fc8d62") +
+  labs(title = "Wykres ważności atrybutów w podejmowaniu decyzji", x="Atrybuty", y="Ważność") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+```
+
+Na podstawie powyższego wykresu okazuje się, że najważniejszymi atrybutami są:
+
+- Rok: Wraz z upływem czasu powstające zestawy Lego są coraz bardziej rozbudowane.
+- Liczba figurek: Poziom rozbudowania zestawu wpływa również na liczbę figurek, które się w nim znajdują.
+
+## Zestawienie przewidywań modelu z rzeczywistymi wartościami
+
+```{r}
+compare_df <- testing %>% select(year, sets_mean_nparts)
+compare_df$Predict <- predictions
+
+ggplot(compare_df, aes(x = year)) +
+  geom_line(aes(y = sets_mean_nparts, color = "Rzeczywista liczba części"), size = 1) +
+  geom_line(aes(y = Predict, color = "Przewidywana liczba części"), size = 1) +
+  labs(x = "Rok", y = "Średnia liczba części w zestawie") +
+  scale_color_manual(name = "Legenda", values = c("Rzeczywista liczba części" = "#fc8d62", "Przewidywana liczba części" = "#8da0cb")) +
+  theme_bw()
+```
