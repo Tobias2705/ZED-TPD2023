@@ -32,7 +32,7 @@ Analiza danych obejmuje lata 1980-2023 i uwydatnia ewolucję Lego, zarówno pod 
 
 Zbiór danych został poddany analizie korelacji, dzięki czemu wyróżniono istotne związki pomiędzy różnymi atrybutami, takimi jak rok produkcji, liczba używanych figurek, czy złożoność zestawów. Korelacje te dostarczają głębszego zrozumienia dynamiki rozwoju produktów Lego na przestrzeni lat.
 
-Ostatnim elementem analizy jest sekcja próbująca przewidzieć złożoność zestawów Lego, w tym celu użytu algorytmu uczenia maszynowego Random Forest. Na tej podstawie można wyciągnać wniosek, że największy wpływ na to mają : upływający czas oraz ilość figurek.
+Ostatnim elementem analizy jest sekcja próbująca przewidzieć złożoność zestawów Lego, w tym celu użyto algorytmu uczenia maszynowego Random Forest. Na tej podstawie można wyciągnać wniosek, że największy wpływ na to mają upływający czas oraz ilość figurek.
 
 # Powtarzalność wyników
 
@@ -79,7 +79,7 @@ inventories <- read.csv("dataset/inventories.csv")
 Ta sekcja poświęcona jest przetworzeniu brakujących wartości oraz transformacji wykorzystanych zbiorów danych.
 
 ## Zestawy Lego
-Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się tutaj informacje o zestawach Lego, takie jak: rok wydania oraz ilość części w zestawie, ale też lata w jakich dany zestaw zadebiutował na rynku. 
+Pierwsza i bardzo ważna część badanego zbioru danych. Zawierają się w niej informacje o zestawach Lego, takie jak: rok wydania, ilość części w zestawie oraz lata w jakich dany zestaw zadebiutował na rynku. 
 
 ```{r}
 sets <- sets %>% filter(num_parts > 0)
@@ -129,7 +129,7 @@ knitr::kable(summary(sets_with_themes), caption = "Podstawowe statystyki - zesta
 ```
 
 ## Figurki Lego
-Kolejna część badanego zbioru danych. Możemy znaleźć tutaj informacje o figurkach m.in. z czego się one składają.  
+Kolejna część badanego zbioru danych. Możemy znaleźć w niej informacje o figurkach m.in. z czego się składają.  
 
 ``` {r}
 colnames(figs)[colnames(figs) == "name"] <- "fig_name"
@@ -145,7 +145,7 @@ inventory_minifigures <- inv_figs %>%
 ```
 
 ### Analiza atrybutów
-Jeśli chodzi o ilość wykorzystywanych w zestawach figurek to możemy zauważyć, że z czasem wykorzystywane są one coraz częściej.
+Jeśli chodzi o ilość wykorzystywanych w zestawach figurek to możemy zauważyć, że z czasem pojawiają się coraz częściej.
 
 ```{r}
 figures_number <- inventory_minifigures  %>%
@@ -168,7 +168,7 @@ knitr::kable(summary(inventory_minifigures), caption = "Podstawowe statystyki - 
 ```
 
 ## Części Lego
-Ostatania część badanego zestawu danych zawiera informacje na temat części Lego. Znajdują się tutaj szczegóły poszczególnych części: elementy z których się składają, kolory, materiał z którego zostały wykonane oraz kategoria do której przynależą.
+Ostatania część badanego zestawu danych zawiera informacje na temat części Lego. Znajdują się w niej szczegóły poszczególnych części: elementy z których się składają, kolor, materiał z którego zostały wykonane oraz kategoria do której przynależą.
 
 ``` {r}
 colnames(parts)[colnames(parts) == "name"] <- "part_name"
@@ -193,7 +193,7 @@ inventory_parts <- inv_parts %>%
 ```
 
 ### Analiza atrybutów
-W przypadku części Lego również można dostrzeć pewne trendy. Wykorzystywane elementy są coraz bardziej zróżnicowane, poprzez tworzenie części z nowych materiałów oraz w nowych kolorach. Warte wyróżnienia jest, że złożoność części się nie zmieniła (na jedną część średnio przypada 1.5 elementu)
+W przypadku części Lego również można dostrzec pewne trendy. Wykorzystywane elementy są coraz bardziej zróżnicowane, poprzez tworzenie części z nowych materiałów oraz w nowych kolorach. Warte wyróżnienia jest, że złożoność części się nie zmieniła (na jedną część średnio przypada 1.6 elementu)
 
 ```{r}
 transparent_parts <- inventory_parts %>%
@@ -316,7 +316,7 @@ knitr::kable(cor_df %>%
 ```
 
 ## Podsumowanie
-Wnioski wyciągnięte na podstawień obliczeń współczynnika korelacji:
+Wnioski wyciągnięte na podstawie obliczeń współczynnika korelacji:
 
 - Rok i unikalne tematyki: wraz z upływem czasu na rynku pojawiają się zestawy o nowych tematykach
 - Rok i liczba figurek: wraz z upływem czasu w zestawach znajduje się więcej figurek
@@ -344,8 +344,8 @@ testing <- dataset[-inTraining,]
 ```
 
 ## Schemat uczenia
-Przygotowano schemat uczenia wraz z optymalizacją parametrów modelu. Najlepszy model został stworzony dla parametru liczby zmiennych losowo wybranych jako kandydaci w każdym podziale (mtry) równego 4.
-Poza tym wybrany model charakteryzuje się najniższym błędem średniokwadratowym (RMSE), który wynosi 20.29928. Dodatkowo miara dopasowania modelu do danych (Rsquared) również jest też najwyższa.
+Przygotowano schemat uczenia wraz z optymalizacją parametrów modelu. Najlepszy model został stworzony dla parametru liczby zmiennych losowo wybranych jako kandydaci w każdym podziale (mtry) równego 7.
+Poza tym wybrany model charakteryzuje się najniższym błędem średniokwadratowym (RMSE), który wynosi 24.44512. Dodatkowo miara dopasowania modelu do danych (Rsquared) również jest też najwyższa.
 
 ```{r}
 rfGrid <- expand.grid(mtry = 2:20)
@@ -378,7 +378,7 @@ important_df <- data.frame(importance(fitTune$finalModel))
 important_df$names <- rownames(important_df)
 
 
-ggplot(important_df, aes(x=names, y=IncNodePurity/100)) + 
+ggplot(important_df, aes(x=names, y=IncNodePurity/1000)) + 
   geom_bar(stat="identity", fill = "#fc8d62") +
   labs(title = "Wykres ważności atrybutów w podejmowaniu decyzji", x="Atrybuty", y="Ważność") +
   theme_bw() +
